@@ -36,6 +36,8 @@ class CameraStreamBase : public hcs_qml_ros2::QObjectRos2
   Q_PROPERTY( QString codec READ codec NOTIFY streamInfoChanged )
   //! The framerate of the stream.
   Q_PROPERTY( qreal framerate READ framerate NOTIFY framerateChanged )
+  //! Capture time of the current frame in seconds (ROS time). (0 if not available)
+  Q_PROPERTY( qreal captureTime READ captureTime NOTIFY captureTimeChanged )
   //! The transport of the stream.
   Q_PROPERTY( QString transport READ transport NOTIFY streamInfoChanged )
   //! Whether the stream is currently paused (frames are dropped but subscription remains active).
@@ -56,6 +58,8 @@ public:
   void setEnabled( bool value );
 
   int latency() const;
+
+  qreal captureTime() const;
 
   int networkLatency() const;
 
@@ -91,6 +95,7 @@ signals:
   void cameraIdChanged();
   void framerateChanged();
   void latencyChanged();
+  void captureTimeChanged();
   void streamIndexChanged();
   void streamInfoChanged();
   void preferredSizeChanged();

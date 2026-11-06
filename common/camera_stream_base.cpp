@@ -113,6 +113,8 @@ void CameraStreamBase::setPreferredSize( const QSize &value )
 
 int CameraStreamBase::latency() const { return current_stats_.latency; }
 
+qreal CameraStreamBase::captureTime() const { return current_stats_.capture_time * 1e-9; }
+
 int CameraStreamBase::networkLatency() const { return current_stats_.network_latency; }
 
 int CameraStreamBase::processingLatency() const { return current_stats_.processing_latency; }
@@ -147,11 +149,13 @@ void CameraStreamBase::createStream()
           current_stats_.latency = stats.latency;
           current_stats_.network_latency = stats.network_latency;
           current_stats_.processing_latency = stats.processing_latency;
+          current_stats_.capture_time = stats.capture_time;
 
           if ( changed )
             emit streamInfoChanged();
           emit framerateChanged();
           emit latencyChanged();
+          emit captureTimeChanged();
 
           last_frame_ = frame;
           presentFrame( frame );
@@ -170,6 +174,7 @@ void CameraStreamBase::createStream()
         emit streamInfoChanged();
         emit framerateChanged();
         emit latencyChanged();
+        emit captureTimeChanged();
       },
       Qt::QueuedConnection ); // Clear previous frame
 }

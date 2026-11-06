@@ -6,6 +6,8 @@
 
 #include <QSize>
 
+#include <cstdint>
+
 namespace ros_camera_server_qml_common
 {
 
@@ -15,6 +17,8 @@ struct StreamStatistics {
   int processing_latency = -1;
   QSize resolution;
   qreal framerate = 0.0;
+  //! Capture time of the frame in nanoseconds (ROS time), 0 if unknown.
+  int64_t capture_time = 0;
 };
 
 } // namespace ros_camera_server_qml_common

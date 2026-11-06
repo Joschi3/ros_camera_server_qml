@@ -104,13 +104,16 @@ class CameraInfo
   Q_PROPERTY( QString cameraId READ cameraId CONSTANT )
   Q_PROPERTY( QString name READ name CONSTANT )
   Q_PROPERTY( QVariantList streams READ streams CONSTANT )
+  //! The sensor_msgs/CameraInfo topic of the camera, empty if unknown.
+  Q_PROPERTY( QString cameraInfoTopic READ cameraInfoTopic CONSTANT )
 
 public:
   CameraInfo() = default;
 
-  CameraInfo( ServerInfo server, QString id, QString name, QList<CameraStreamInfo> streams )
+  CameraInfo( ServerInfo server, QString id, QString name, QList<CameraStreamInfo> streams,
+              QString camera_info_topic )
       : server_( std::move( server ) ), camera_( std::move( id ) ), name_( std::move( name ) ),
-        streams_( std::move( streams ) )
+        streams_( std::move( streams ) ), camera_info_topic_( std::move( camera_info_topic ) )
   {
   }
 
@@ -129,6 +132,8 @@ public:
 
   const QList<CameraStreamInfo> &rawStreams() const { return streams_; }
 
+  const QString &cameraInfoTopic() const { return camera_info_topic_; }
+
   friend bool operator==( const CameraInfo &lhs, const CameraInfo &rhs )
   {
     return lhs.server_ == rhs.server_ && lhs.camera_ == rhs.camera_;
@@ -139,6 +144,7 @@ private:
   QString camera_;
   QString name_;
   QList<CameraStreamInfo> streams_;
+  QString camera_info_topic_;
 };
 
 } // namespace ros_camera_server_qml_common

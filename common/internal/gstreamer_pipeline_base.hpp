@@ -79,7 +79,12 @@ private:
   std::mutex latency_times_mutex_;
   RingBuffer<std::pair<GstClockTime, std::chrono::nanoseconds>, 30> latency_times_;
   std::mutex depay_times_mutex_;
-  RingBuffer<std::pair<GstClockTime, std::chrono::steady_clock::time_point>, 30> depay_times_;
+  struct DepayTime {
+    GstClockTime pts;
+    std::chrono::steady_clock::time_point arrival;
+    GstClockTime capture_time;
+  };
+  RingBuffer<DepayTime, 30> depay_times_;
   StreamStatistics stats_;
 
   std::unique_ptr<WebRTCClient> webrtc_client_;
