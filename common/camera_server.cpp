@@ -57,7 +57,8 @@ CameraInfo toCameraInfo( const Announcement &msg, const Camera &camera )
   for ( const auto &stream : camera.streams ) { streams.append( toStreamInfo( stream ) ); }
   return { ServerInfo( QString::fromStdString( msg.robot ), QString::fromStdString( msg.server_id ),
                        QString::fromStdString( msg.host ), msg.signaling_port ),
-           QString::fromStdString( camera.id ), QString::fromStdString( camera.name ), streams };
+           QString::fromStdString( camera.id ), QString::fromStdString( camera.name ), streams,
+           QString::fromStdString( camera.camera_info_topic ) };
 }
 } // namespace
 
@@ -89,7 +90,8 @@ void CameraServerSingleton::onAnnouncement( const Announcement::ConstSharedPtr &
         to_remove.push_back( camera );
         continue;
       }
-      if ( camera.rawStreams().size() != static_cast<int>( it->streams.size() ) ||
+      if ( camera.cameraInfoTopic().toStdString() != it->camera_info_topic ||
+           camera.rawStreams().size() != static_cast<int>( it->streams.size() ) ||
            std::mismatch(
                camera.rawStreams().begin(), camera.rawStreams().end(), it->streams.begin(),
                []( const CameraStreamInfo &a, const CameraStream &b ) {

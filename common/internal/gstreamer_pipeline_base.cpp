@@ -360,22 +360,29 @@ GstFlowReturn GStreamerPipelineBase::onNewSample( GstElement *sink, gpointer use
 
   // Compute processing latency by correlating buffer PTS with depay arrival time
   GstClockTime pts = GST_BUFFER_PTS( buffer );
+  self->stats_.capture_time = 0;
   if ( GST_CLOCK_TIME_IS_VALID( pts ) ) {
     constexpr GstClockTime PTS_MATCH_TOLERANCE = 100 * GST_USECOND;
     std::lock_guard<std::mutex> lock( self->depay_times_mutex_ );
     // Pop entries until we find the matching PTS (older entries were dropped)
     const GstClockTime pts_delta = pts > PTS_MATCH_TOLERANCE ? pts - PTS_MATCH_TOLERANCE : 0;
-    while ( !self->depay_times_.empty() && self->depay_times_.front().first < pts_delta ) {
+    while ( !self->depay_times_.empty() && self->depay_times_.front().pts < pts_delta ) {
       self->depay_times_.pop_front();
     }
     // Only use the entry if it actually belongs to this frame. A mismatch (e.g.
     // leftover entries recorded around a stream discontinuity) would produce a
     // bogus latency from an unrelated arrival time.
     if ( !self->depay_times_.empty() &&
-         self->depay_times_.front().first <= pts + PTS_MATCH_TOLERANCE ) {
-      auto processing_ns = std::chrono::steady_clock::now() - self->depay_times_.front().second;
+         self->depay_times_.front().pts <= pts + PTS_MATCH_TOLERANCE ) {
+      auto processing_ns = std::chrono::steady_clock::now() - self->depay_times_.front().arrival;
       self->stats_.processing_latency =
           std::chrono::duration_cast<std::chrono::milliseconds>( processing_ns ).count();
+    }
+    // A frame spans multiple RTP packets of which not all may carry the capture time.
+    while ( !self->depay_times_.empty() &&
+            self->depay_times_.front().pts <= pts + PTS_MATCH_TOLERANCE ) {
+      const auto capture_time = static_cast<int64_t>( self->depay_times_.front().capture_time );
+      self->stats_.capture_time = std::max( self->stats_.capture_time, capture_time );
       self->depay_times_.pop_front();
     }
   }
@@ -422,15 +429,16 @@ GstPadProbeReturn GStreamerPipelineBase::timestampProbe( GstPad *, GstPadProbeIn
 
   auto buffer = GST_PAD_PROBE_INFO_BUFFER( info );
 
+  // Extract timestamp from RTP header extension
+  GstClockTime capture_time = 0;
+  rtp_buffer_get_timestamp_extension( buffer, capture_time );
   {
     std::lock_guard<std::mutex> lock( self->depay_times_mutex_ );
-    self->depay_times_.push( { GST_BUFFER_PTS( buffer ), std::chrono::steady_clock::now() } );
+    self->depay_times_.push(
+        { GST_BUFFER_PTS( buffer ), std::chrono::steady_clock::now(), capture_time } );
   }
 
-  // Extract timestamp from RTP header extension
-  GstClockTime capture_time;
-  if ( self->ros_time_func_ && rtp_buffer_get_timestamp_extension( buffer, capture_time ) &&
-       capture_time > 0 ) {
+  if ( self->ros_time_func_ && capture_time > 0 ) {
     int64_t now_ns = self->ros_time_func_();
     // Calculate end-to-end latency wrt ROS time (requires synchronized clocks)
     auto latency = std::chrono::nanoseconds( now_ns - capture_time );

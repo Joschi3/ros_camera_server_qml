@@ -196,6 +196,7 @@ std::shared_ptr<void> SmartCameraStream::subscribeROS(
                                           const hcs_qml_ros2::ImageInformation &info ) {
     StreamStatistics stats;
     stats.latency = ( node->now() - info.timestamp ).seconds() * 1000;
+    stats.capture_time = info.timestamp.nanoseconds();
     stats.resolution = frame.size();
     frame_callback( frame, stats );
   };
